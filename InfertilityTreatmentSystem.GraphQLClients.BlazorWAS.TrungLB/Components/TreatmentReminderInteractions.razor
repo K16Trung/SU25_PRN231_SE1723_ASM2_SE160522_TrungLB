@@ -1,0 +1,179 @@
+@inject IJSRuntime JSRuntime
+
+<div class="interaction-panel bg-light p-3 rounded mt-3">
+    <div class="row align-items-center">
+        <!-- Like System -->
+        <div class="col-md-4 text-center">
+            <h6 class="text-muted mb-2">
+                <i class="bi bi-heart-fill text-danger"></i> Like this Reminder
+            </h6>
+            <div class="d-flex justify-content-center align-items-center gap-2">
+                <button class="btn @(hasLiked ? "btn-danger" : "btn-outline-danger") btn-sm" 
+                        @onclick="ToggleLike">
+                    <i class="bi @(hasLiked ? "bi-heart-fill" : "bi-heart")"></i>
+                    @(hasLiked ? "Liked" : "Like")
+                </button>
+                <span class="badge bg-danger">@totalLikes</span>
+            </div>
+        </div>
+
+        <!-- Interaction Counter -->
+        <div class="col-md-4 text-center">
+            <h6 class="text-muted mb-2">
+                <i class="bi bi-activity"></i> Interactions
+            </h6>
+            <div class="d-flex justify-content-center align-items-center gap-1">
+                <button class="btn btn-outline-warning btn-sm" @onclick="DecrementInteraction">
+                    <i class="bi bi-dash-circle"></i>
+                </button>
+                <span class="badge bg-info fs-6 mx-2">@interactionCount</span>
+                <button class="btn btn-outline-success btn-sm" @onclick="IncrementInteraction">
+                    <i class="bi bi-plus-circle"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Priority Rating -->
+        <div class="col-md-4 text-center">
+            <h6 class="text-muted mb-2">
+                <i class="bi bi-star-fill text-warning"></i> Priority
+            </h6>
+            <div class="d-flex justify-content-center align-items-center gap-1">
+                @for (int i = 1; i <= 5; i++)
+                {
+                    int star = i; // Capture for lambda
+                    <button class="btn btn-sm p-0 border-0" @onclick="() => SetPriority(star)">
+                        <i class="bi @(star <= priorityRating ? "bi-star-fill text-warning" : "bi-star text-muted")"></i>
+                    </button>
+                }
+            </div>
+            <small class="text-muted">@GetPriorityText()</small>
+        </div>
+    </div>
+
+    <!-- Statistics Row -->
+    <div class="row mt-3 pt-3 border-top">
+        <div class="col text-center">
+            <div class="row">
+                <div class="col-3">
+                    <div class="badge bg-primary">@viewCount</div>
+                    <small class="d-block text-muted">
+                        <i class="bi bi-eye"></i> Views
+                    </small>
+                </div>
+                <div class="col-3">
+                    <div class="badge bg-success">@positiveActions</div>
+                    <small class="d-block text-muted">
+                        <i class="bi bi-plus"></i> Positive
+                    </small>
+                </div>
+                <div class="col-3">
+                    <div class="badge bg-warning">@neutralActions</div>
+                    <small class="d-block text-muted">
+                        <i class="bi bi-dash"></i> Neutral
+                    </small>
+                </div>
+                <div class="col-3">
+                    <div class="badge bg-secondary">@totalActions</div>
+                    <small class="d-block text-muted">
+                        <i class="bi bi-activity"></i> Total
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int ReminderId { get; set; }
+    [Parameter] public string? ReminderTitle { get; set; }
+
+    // Interactive counters
+    private int totalLikes = 0;
+    private bool hasLiked = false;
+    private int interactionCount = 0;
+    private int priorityRating = 3;
+    private int viewCount = 0;
+    private int positiveActions = 0;
+    private int neutralActions = 0;
+    private int totalActions = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Initialize with some sample data (in real app, load from database)
+        totalLikes = new Random().Next(5, 25);
+        viewCount = new Random().Next(10, 50);
+        await IncrementViewCount();
+    }
+
+    private async Task ToggleLike()
+    {
+        if (hasLiked)
+        {
+            hasLiked = false;
+            totalLikes--;
+            await ShowToast("Like removed", "secondary");
+        }
+        else
+        {
+            hasLiked = true;
+            totalLikes++;
+            positiveActions++;
+            await ShowToast($"You liked '{ReminderTitle}'! ??", "danger");
+        }
+        totalActions++;
+    }
+
+    private async Task IncrementInteraction()
+    {
+        interactionCount++;
+        positiveActions++;
+        totalActions++;
+        await ShowToast("Interaction increased! ??", "success");
+    }
+
+    private async Task DecrementInteraction()
+    {
+        interactionCount--;
+        neutralActions++;
+        totalActions++;
+        await ShowToast("Interaction decreased! ??", "warning");
+    }
+
+    private async Task SetPriority(int rating)
+    {
+        priorityRating = rating;
+        totalActions++;
+        
+        if (rating >= 4)
+            positiveActions++;
+        else
+            neutralActions++;
+
+        await ShowToast($"Priority set to {GetPriorityText()}", "info");
+    }
+
+    private async Task IncrementViewCount()
+    {
+        viewCount++;
+        totalActions++;
+    }
+
+    private string GetPriorityText()
+    {
+        return priorityRating switch
+        {
+            1 => "Very Low",
+            2 => "Low",
+            3 => "Medium",
+            4 => "High",
+            5 => "Critical",
+            _ => "Medium"
+        };
+    }
+
+    private async Task ShowToast(string message, string type)
+    {
+        await JSRuntime.InvokeVoidAsync("showToast", message, type);
+    }
+}

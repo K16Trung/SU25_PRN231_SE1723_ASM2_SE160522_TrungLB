@@ -1,0 +1,186 @@
+@page "/treatment-reminders/create"
+@using InfertilityTreatmentSystem.GraphQLClients.BlazorWAS.TrungLB.Models
+@using TreatmentReminder.GraphQLClients.BlazorWAS.TrungLB.GraphQLClients
+@using InfertilityTreatmentSystem.GraphQLClients.BlazorWAS.TrungLB.Components
+@inject GraphQLConsumer GraphQLClient
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+
+<PageTitle>Create Treatment Reminder</PageTitle>
+
+<AuthGuard>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-8 offset-md-2">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h4><i class="bi bi-plus-circle"></i> Create New Treatment Reminder</h4>
+                        <small>Add a new reminder to your treatment schedule</small>
+                    </div>
+                    <div class="card-body">
+                        <EditForm Model="@treatmentReminder" OnValidSubmit="@HandleValidSubmit">
+                            <DataAnnotationsValidator />
+                            <ValidationSummary class="text-danger" />
+
+                            <div class="mb-3">
+                                <label for="title" class="form-label">
+                                    <i class="bi bi-card-text"></i> Title <span class="text-danger">*</span>
+                                </label>
+                                <InputText id="title" class="form-control" @bind-Value="treatmentReminder.Title" 
+                                          placeholder="Enter reminder title" />
+                                <ValidationMessage For="@(() => treatmentReminder.Title)" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="message" class="form-label">
+                                    <i class="bi bi-chat-text"></i> Message
+                                </label>
+                                <InputTextArea id="message" class="form-control" rows="3" @bind-Value="treatmentReminder.Message" 
+                                              placeholder="Enter detailed reminder message" />
+                                <ValidationMessage For="@(() => treatmentReminder.Message)" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="reminderDate" class="form-label">
+                                    <i class="bi bi-calendar-event"></i> Reminder Date <span class="text-danger">*</span>
+                                </label>
+                                <input type="datetime-local" id="reminderDate" class="form-control" 
+                                       @bind="treatmentReminder.ReminderDate" 
+                                       @bind:format="yyyy-MM-ddTHH:mm" />
+                                <ValidationMessage For="@(() => treatmentReminder.ReminderDate)" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="patientName" class="form-label">
+                                    <i class="bi bi-person"></i> Patient Name <span class="text-danger">*</span>
+                                </label>
+                                <InputText id="patientName" class="form-control" @bind-Value="treatmentReminder.PatientName" 
+                                          placeholder="Enter patient name" />
+                                <ValidationMessage For="@(() => treatmentReminder.PatientName)" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="relatedDoctor" class="form-label">
+                                    <i class="bi bi-person-badge"></i> Related Doctor
+                                </label>
+                                <InputText id="relatedDoctor" class="form-control" @bind-Value="treatmentReminder.RelatedDoctor" 
+                                          placeholder="Enter doctor name (optional)" />
+                                <ValidationMessage For="@(() => treatmentReminder.RelatedDoctor)" />
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="reminderType" class="form-label">
+                                    <i class="bi bi-tag"></i> Reminder Type
+                                </label>
+                                <InputSelect id="reminderType" class="form-select" @bind-Value="treatmentReminder.ReminderTypeId">
+                                    <option value="">-- Select Reminder Type --</option>
+                                    @foreach (var type in reminderTypes)
+                                    {
+                                        <option value="@type.ReminderTypeId">@type.Name</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="@(() => treatmentReminder.ReminderTypeId)" />
+                            </div>
+
+                            <div class="mb-4">
+                                <div class="form-check">
+                                    <InputCheckbox id="isRecurring" class="form-check-input" @bind-Value="treatmentReminder.IsRecurring" />
+                                    <label class="form-check-label" for="isRecurring">
+                                        <i class="bi bi-arrow-repeat"></i> Is Recurring
+                                    </label>
+                                    <small class="form-text text-muted d-block">
+                                        Check this if the reminder should repeat regularly
+                                    </small>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-between">
+                                <button type="button" class="btn btn-secondary" @onclick="NavigateBack">
+                                    <i class="bi bi-arrow-left"></i> Back to List
+                                </button>
+                                <button type="submit" class="btn btn-success" disabled="@isSubmitting">
+                                    @if (isSubmitting)
+                                    {
+                                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                                        <span>Creating...</span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-check-circle"></i>
+                                        <span>Create Reminder</span>
+                                    }
+                                </button>
+                            </div>
+                        </EditForm>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</AuthGuard>
+
+@code {
+    private TreatmentReminderTrungLb treatmentReminder = new();
+    private List<ReminderTypeTrungLb> reminderTypes = new();
+    private bool isSubmitting = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Initialize with default values
+        treatmentReminder = new TreatmentReminderTrungLb
+        {
+            ReminderDate = DateTime.Now.AddDays(1),
+            CreatedAt = DateTime.Now,
+            IsSent = false,
+            IsRecurring = false
+        };
+
+        // Load reminder types for dropdown
+        await LoadReminderTypes();
+    }
+
+    private async Task LoadReminderTypes()
+    {
+        try
+        {
+            reminderTypes = await GraphQLClient.GetReminderTypeTrungLbs();
+        }
+        catch (Exception ex)
+        {
+            // Silently handle errors for reminder types
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        isSubmitting = true;
+        
+        try
+        {
+            var result = await GraphQLClient.CreateTreatmentReminder(treatmentReminder);
+            
+            if (result > 0)
+            {
+                await JSRuntime.InvokeVoidAsync("showToast", "Treatment reminder created successfully!", "success");
+                NavigateBack();
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("showToast", "Error creating treatment reminder.", "error");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("showToast", $"Error: {ex.Message}", "error");
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void NavigateBack()
+    {
+        Navigation.NavigateTo("/treatment-reminders");
+    }
+}

@@ -1,0 +1,136 @@
+﻿@page "/counter"
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Interactive Counter</PageTitle>
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white text-center">
+                    <h3><i class="bi bi-calculator"></i> Interactive Counter</h3>
+                </div>
+                <div class="card-body text-center">
+                    <!-- Current Count Display -->
+                    <div class="mb-4">
+                        <h1 class="display-3 text-primary">@currentCount</h1>
+                        <p class="text-muted">Current Count</p>
+                    </div>
+
+                    <!-- Counter Controls -->
+                    <div class="row mb-4">
+                        <div class="col-4">
+                            <button class="btn btn-danger btn-lg w-100" @onclick="DecrementCount">
+                                <i class="bi bi-dash-circle-fill"></i>
+                                <br><small>Decrease</small>
+                            </button>
+                        </div>
+                        <div class="col-4">
+                            <button class="btn btn-warning btn-lg w-100" @onclick="ResetCount">
+                                <i class="bi bi-arrow-clockwise"></i>
+                                <br><small>Reset</small>
+                            </button>
+                        </div>
+                        <div class="col-4">
+                            <button class="btn btn-success btn-lg w-100" @onclick="IncrementCount">
+                                <i class="bi bi-plus-circle-fill"></i>
+                                <br><small>Increase</small>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Like System -->
+                    <div class="border-top pt-4">
+                        <h5><i class="bi bi-heart-fill text-danger"></i> Like This Counter</h5>
+                        <div class="d-flex justify-content-center align-items-center gap-3">
+                            <button class="btn @(hasLiked ? "btn-danger" : "btn-outline-danger") btn-lg" 
+                                    @onclick="ToggleLike">
+                                <i class="bi @(hasLiked ? "bi-heart-fill" : "bi-heart")"></i>
+                                @(hasLiked ? "Liked" : "Like")
+                            </button>
+                            <div class="text-center">
+                                <div class="badge bg-danger fs-6">@totalLikes</div>
+                                <small class="d-block text-muted">Total Likes</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Counter Statistics -->
+                    <div class="border-top pt-4 mt-4">
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div class="badge bg-info fs-6">@incrementClicks</div>
+                                <small class="d-block text-muted">
+                                    <i class="bi bi-plus-circle"></i> Increments
+                                </small>
+                            </div>
+                            <div class="col-4">
+                                <div class="badge bg-warning fs-6">@decrementClicks</div>
+                                <small class="d-block text-muted">
+                                    <i class="bi bi-dash-circle"></i> Decrements
+                                </small>
+                            </div>
+                            <div class="col-4">
+                                <div class="badge bg-secondary fs-6">@resetClicks</div>
+                                <small class="d-block text-muted">
+                                    <i class="bi bi-arrow-clockwise"></i> Resets
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private int currentCount = 0;
+    private int totalLikes = 42; // Starting with some likes
+    private bool hasLiked = false;
+    private int incrementClicks = 0;
+    private int decrementClicks = 0;
+    private int resetClicks = 0;
+
+    private async Task IncrementCount()
+    {
+        currentCount++;
+        incrementClicks++;
+        await ShowToast("Counter increased!", "success");
+    }
+
+    private async Task DecrementCount()
+    {
+        currentCount--;
+        decrementClicks++;
+        await ShowToast("Counter decreased!", "warning");
+    }
+
+    private async Task ResetCount()
+    {
+        currentCount = 0;
+        resetClicks++;
+        await ShowToast("Counter reset to zero!", "info");
+    }
+
+    private async Task ToggleLike()
+    {
+        if (hasLiked)
+        {
+            hasLiked = false;
+            totalLikes--;
+            await ShowToast("Like removed!", "secondary");
+        }
+        else
+        {
+            hasLiked = true;
+            totalLikes++;
+            await ShowToast("Thanks for the like! ❤️", "danger");
+        }
+    }
+
+    private async Task ShowToast(string message, string type)
+    {
+        await JSRuntime.InvokeVoidAsync("showToast", message, type);
+    }
+}

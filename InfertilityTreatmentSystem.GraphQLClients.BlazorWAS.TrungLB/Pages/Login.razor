@@ -1,0 +1,412 @@
+@page "/login"
+@using InfertilityTreatmentSystem.GraphQLClients.BlazorWAS.TrungLB.Models
+@using InfertilityTreatmentSystem.GraphQLClients.BlazorWAS.TrungLB.Services
+@using System.ComponentModel.DataAnnotations
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+@inject IAuthService AuthService
+
+<PageTitle>Login - Infertility Treatment System</PageTitle>
+
+<div class="login-container">
+    <div class="login-card">
+        <div class="login-header">
+            <div class="logo-container">
+                <i class="bi bi-shield-lock-fill"></i>
+            </div>
+            <h3 class="login-title">Welcome Back</h3>
+            <p class="login-subtitle">Sign in to your account</p>
+        </div>
+
+        <div class="login-body">
+            <EditForm Model="@loginModel" OnValidSubmit="@HandleLogin">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="text-danger mb-3" />
+
+                <div class="form-group">
+                    <label for="username" class="form-label">
+                        <i class="bi bi-person-fill"></i> Username
+                    </label>
+                    <InputText id="username" 
+                               class="form-control" 
+                               @bind-Value="loginModel.Username" 
+                               placeholder="Enter your username" />
+                    <ValidationMessage For="@(() => loginModel.Username)" />
+                </div>
+
+                <div class="form-group">
+                    <label for="password" class="form-label">
+                        <i class="bi bi-lock-fill"></i> Password
+                    </label>
+                    <div class="password-input-container">
+                        <InputText id="password" 
+                                   type="@(showPassword ? "text" : "password")"
+                                   class="form-control" 
+                                   @bind-Value="loginModel.Password" 
+                                   placeholder="Enter your password" />
+                        <button type="button" 
+                                class="password-toggle-btn" 
+                                @onclick="TogglePasswordVisibility">
+                            <i class="bi @(showPassword ? "bi-eye-slash" : "bi-eye")"></i>
+                        </button>
+                    </div>
+                    <ValidationMessage For="@(() => loginModel.Password)" />
+                </div>
+
+                <div class="form-check mb-3">
+                    <InputCheckbox id="rememberMe" class="form-check-input" @bind-Value="loginModel.RememberMe" />
+                    <label class="form-check-label" for="rememberMe">
+                        Remember me
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-login" disabled="@isLoading">
+                    @if (isLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        <span>Signing in...</span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-box-arrow-in-right me-2"></i>
+                        <span>Sign In</span>
+                    }
+                </button>
+            </EditForm>
+
+            <div class="login-footer">
+                <div class="text-center">
+                    <a href="#" class="forgot-password-link">
+                        <i class="bi bi-question-circle"></i> Forgot your password?
+                    </a>
+                </div>
+                
+                <div class="demo-credentials">
+                    <small class="text-muted">
+                        <strong>Available Credentials:</strong><br>
+                        Username: admin | Password: Admin1234!<br>
+                        Username: doctor.leminh | Password: Doc2024!
+                    </small>
+                </div>
+
+                <!-- Interactive Login Stats -->
+                <div class="login-stats mt-3">
+                    <h6 class="text-muted text-center mb-3">
+                        <i class="bi bi-graph-up"></i> Login Activity
+                    </h6>
+                    
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <button class="btn btn-sm btn-outline-primary w-100" @onclick="IncrementLoginAttempts">
+                                <div class="badge bg-primary">@loginAttempts</div>
+                                <small class="d-block">
+                                    <i class="bi bi-plus-circle"></i> Attempts
+                                </small>
+                            </button>
+                        </div>
+                        <div class="col-4">
+                            <button class="btn btn-sm @(hasLikedLogin ? "btn-danger" : "btn-outline-danger") w-100" 
+                                    @onclick="ToggleLoginLike">
+                                <div class="badge @(hasLikedLogin ? "bg-light text-danger" : "bg-danger")">@loginLikes</div>
+                                <small class="d-block">
+                                    <i class="bi @(hasLikedLogin ? "bi-heart-fill" : "bi-heart")"></i> Likes
+                                </small>
+                            </button>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-center">
+                                <div class="badge bg-info">@pageViews</div>
+                                <small class="d-block text-muted">
+                                    <i class="bi bi-eye"></i> Views
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Rating System -->
+                    <div class="mt-3 text-center">
+                        <small class="text-muted d-block mb-2">Rate this login experience:</small>
+                        <div class="d-flex justify-content-center gap-1">
+                            @for (int i = 1; i <= 5; i++)
+                            {
+                                int star = i; // Capture for lambda
+                                <button class="btn btn-sm p-0 border-0" @onclick="() => SetLoginRating(star)">
+                                    <i class="bi @(star <= loginRating ? "bi-star-fill text-warning" : "bi-star text-muted")"></i>
+                                </button>
+                            }
+                        </div>
+                        <small class="text-muted">@GetRatingText()</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .login-container {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 20px;
+    }
+
+    .login-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        width: 100%;
+        max-width: 400px;
+        overflow: hidden;
+    }
+
+    .login-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        text-align: center;
+    }
+
+    .logo-container {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+
+    .login-title {
+        margin: 0;
+        font-weight: 600;
+    }
+
+    .login-subtitle {
+        margin: 0.5rem 0 0 0;
+        opacity: 0.9;
+    }
+
+    .login-body {
+        padding: 2rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+        color: #333;
+    }
+
+    .form-control {
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+
+    .password-input-container {
+        position: relative;
+    }
+
+    .password-toggle-btn {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: #6c757d;
+        cursor: pointer;
+        padding: 0.375rem;
+    }
+
+    .password-toggle-btn:hover {
+        color: #495057;
+    }
+
+    .btn-login {
+        width: 100%;
+        padding: 0.75rem;
+        font-weight: 500;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        transition: all 0.3s ease;
+    }
+
+    .btn-login:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .login-footer {
+        margin-top: 1.5rem;
+        text-align: center;
+    }
+
+    .forgot-password-link {
+        color: #667eea;
+        text-decoration: none;
+        font-size: 0.9rem;
+    }
+
+    .forgot-password-link:hover {
+        text-decoration: underline;
+    }
+
+    .demo-credentials {
+        margin-top: 1rem;
+        padding: 1rem;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        border-left: 4px solid #17a2b8;
+    }
+
+    .login-stats {
+        padding: 1rem;
+        background-color: #f1f3f5;
+        border-radius: 8px;
+        border-top: 4px solid #007bff;
+    }
+
+    .login-stats .btn {
+        padding: 0.5rem 0;
+    }
+
+    .login-stats .badge {
+        font-size: 1.25rem;
+        line-height: 1;
+    }
+
+    .login-stats i {
+        font-size: 1.2rem;
+    }
+</style>
+
+@code {
+    private LoginModel loginModel = new();
+    private bool isLoading = false;
+    private bool showPassword = false;
+
+    // Interactive counter variables
+    private int loginAttempts = 1;
+    private int loginLikes = 42;
+    private bool hasLikedLogin = false;
+    private int pageViews = 0;
+    private int loginRating = 4;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Initialize page views and simulate some activity
+        pageViews = new Random().Next(50, 150);
+        await IncrementPageView();
+    }
+
+    private void TogglePasswordVisibility()
+    {
+        showPassword = !showPassword;
+    }
+
+    private async Task HandleLogin()
+    {
+        isLoading = true;
+        
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("showToast", "Authenticating against database...", "info");
+            
+            // Reduce delay since we're doing real authentication
+            await Task.Delay(500);
+            
+            // Use AuthService for authentication against database
+            bool loginSuccess = await AuthService.LoginAsync(loginModel.Username, loginModel.Password);
+            
+            if (loginSuccess)
+            {
+                await JSRuntime.InvokeVoidAsync("showToast", $"Welcome back, {loginModel.Username}!", "success");
+                
+                // Redirect to home page
+                Navigation.NavigateTo("/", true);
+            }
+            else
+            {
+                await IncrementLoginAttempts(); // Auto-increment on failed attempt
+                await JSRuntime.InvokeVoidAsync("showToast", "Invalid username or password. Please check your credentials.", "error");
+            }
+        }
+        catch (Exception ex)
+        {
+            await IncrementLoginAttempts();
+            await JSRuntime.InvokeVoidAsync("showToast", $"Login failed: {ex.Message}", "error");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    // Interactive counter methods
+    private async Task IncrementLoginAttempts()
+    {
+        loginAttempts++;
+        await JSRuntime.InvokeVoidAsync("showToast", $"Login attempt #{loginAttempts}", "info");
+    }
+
+    private async Task ToggleLoginLike()
+    {
+        if (hasLikedLogin)
+        {
+            hasLikedLogin = false;
+            loginLikes--;
+            await JSRuntime.InvokeVoidAsync("showToast", "Like removed", "secondary");
+        }
+        else
+        {
+            hasLikedLogin = true;
+            loginLikes++;
+            await JSRuntime.InvokeVoidAsync("showToast", "Thanks for liking our login page! ??", "danger");
+        }
+    }
+
+    private async Task IncrementPageView()
+    {
+        pageViews++;
+    }
+
+    private async Task SetLoginRating(int rating)
+    {
+        loginRating = rating;
+        await JSRuntime.InvokeVoidAsync("showToast", $"You rated this login {GetRatingText()}", "info");
+    }
+
+    private string GetRatingText()
+    {
+        return loginRating switch
+        {
+            1 => "Poor",
+            2 => "Fair",
+            3 => "Good",
+            4 => "Very Good",
+            5 => "Excellent",
+            _ => "Good"
+        };
+    }
+
+    public class LoginModel
+    {
+        [Required(ErrorMessage = "Username is required")]
+        public string Username { get; set; } = "";
+
+        [Required(ErrorMessage = "Password is required")]
+        [MinLength(6, ErrorMessage = "Password must be at least 6 characters")]
+        public string Password { get; set; } = "";
+
+        public bool RememberMe { get; set; } = false;
+    }
+}

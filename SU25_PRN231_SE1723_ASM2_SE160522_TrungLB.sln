@@ -1,0 +1,43 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36301.6
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InfertilityTreatmentSystem.Services.TrungLB", "InfertilityTreatmentSystem.Services.TrungLB\InfertilityTreatmentSystem.Services.TrungLB.csproj", "{B03F31AB-42EE-97B6-3885-C35454DF1D1E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InfertilityTreatmentSystem.Repositories.TrungLB", "InfertilityTreatmentSystem.Repositories.TrungLB\InfertilityTreatmentSystem.Repositories.TrungLB.csproj", "{36CA9CAB-1F62-68E6-6466-62BFF3C22C5E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InfertilityTreatmentSystem_GraphQLAPIServices_TrungLB", "InfertilityTreatmentSystem_GraphQLAPIServices_TrungLB\InfertilityTreatmentSystem_GraphQLAPIServices_TrungLB.csproj", "{7C823FBE-A1D2-4826-9F7E-9BD8E76AA317}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InfertilityTreatmentSystem.GraphQLClients.BlazorWAS.TrungLB", "InfertilityTreatmentSystem.GraphQLClients.BlazorWAS.TrungLB\InfertilityTreatmentSystem.GraphQLClients.BlazorWAS.TrungLB.csproj", "{BCC0017C-FF0E-41B1-8162-967E02C2227B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B03F31AB-42EE-97B6-3885-C35454DF1D1E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B03F31AB-42EE-97B6-3885-C35454DF1D1E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B03F31AB-42EE-97B6-3885-C35454DF1D1E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B03F31AB-42EE-97B6-3885-C35454DF1D1E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{36CA9CAB-1F62-68E6-6466-62BFF3C22C5E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{36CA9CAB-1F62-68E6-6466-62BFF3C22C5E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{36CA9CAB-1F62-68E6-6466-62BFF3C22C5E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{36CA9CAB-1F62-68E6-6466-62BFF3C22C5E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7C823FBE-A1D2-4826-9F7E-9BD8E76AA317}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7C823FBE-A1D2-4826-9F7E-9BD8E76AA317}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7C823FBE-A1D2-4826-9F7E-9BD8E76AA317}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7C823FBE-A1D2-4826-9F7E-9BD8E76AA317}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BCC0017C-FF0E-41B1-8162-967E02C2227B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BCC0017C-FF0E-41B1-8162-967E02C2227B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BCC0017C-FF0E-41B1-8162-967E02C2227B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BCC0017C-FF0E-41B1-8162-967E02C2227B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {193559AB-3636-4D77-8C9C-7B532E7F3B34}
+	EndGlobalSection
+EndGlobal

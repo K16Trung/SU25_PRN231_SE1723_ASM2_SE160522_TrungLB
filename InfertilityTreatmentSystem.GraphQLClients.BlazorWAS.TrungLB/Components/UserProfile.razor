@@ -1,0 +1,70 @@
+@using InfertilityTreatmentSystem.GraphQLClients.BlazorWAS.TrungLB.Services
+@using InfertilityTreatmentSystem.GraphQLClients.BlazorWAS.TrungLB.Models
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@implements IDisposable
+
+<div class="user-profile">
+    @if (isAuthenticated)
+    {
+        <div class="dropdown">
+            <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <i class="bi bi-person-circle"></i> @(currentUserDetails?.FullName ?? currentUser)
+            </button>
+            <ul class="dropdown-menu">
+                <li><h6 class="dropdown-header">@currentUserDetails?.FullName</h6></li>
+                <li><span class="dropdown-item-text"><small>@currentUserDetails?.Email</small></span></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="#"><i class="bi bi-person"></i> Profile</a></li>
+                <li><a class="dropdown-item" href="#"><i class="bi bi-gear"></i> Settings</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><button class="dropdown-item" @onclick="Logout"><i class="bi bi-box-arrow-right"></i> Logout</button></li>
+            </ul>
+        </div>
+    }
+    else
+    {
+        <a href="/login" class="btn btn-outline-light btn-sm">
+            <i class="bi bi-box-arrow-in-right"></i> Login
+        </a>
+    }
+</div>
+
+@code {
+    private bool isAuthenticated = false;
+    private string? currentUser;
+    private SystemUserAccount? currentUserDetails;
+    private Timer? timer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CheckAuthStatus();
+        
+        // Check auth status every 5 seconds
+        timer = new Timer(async _ => await InvokeAsync(CheckAuthStatus), null, TimeSpan.Zero, TimeSpan.FromSeconds(5));
+    }
+
+    private async Task CheckAuthStatus()
+    {
+        isAuthenticated = await AuthService.IsAuthenticatedAsync();
+        if (isAuthenticated)
+        {
+            currentUser = await AuthService.GetCurrentUserAsync();
+            currentUserDetails = await AuthService.GetCurrentUserDetailsAsync();
+        }
+        StateHasChanged();
+    }
+
+    private async Task Logout()
+    {
+        await AuthService.LogoutAsync();
+        await JSRuntime.InvokeVoidAsync("showToast", "Logged out successfully", "info");
+        Navigation.NavigateTo("/login");
+    }
+
+    public void Dispose()
+    {
+        timer?.Dispose();
+    }
+}

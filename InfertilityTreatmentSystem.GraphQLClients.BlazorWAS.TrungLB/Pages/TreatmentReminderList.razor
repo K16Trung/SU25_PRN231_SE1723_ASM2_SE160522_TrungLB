@@ -1,0 +1,570 @@
+@page "/treatment-reminders"
+@using InfertilityTreatmentSystem.GraphQLClients.BlazorWAS.TrungLB.Models
+@using TreatmentReminder.GraphQLClients.BlazorWAS.TrungLB.GraphQLClients
+@using InfertilityTreatmentSystem.GraphQLClients.BlazorWAS.TrungLB.Components
+@inject GraphQLConsumer GraphQLClient
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+
+<PageTitle>Treatment Reminders</PageTitle>
+
+<AuthGuard>
+    <div class="container-fluid">
+        <div class="row mb-3">
+            <div class="col">
+                <h3><i class="bi bi-bell-fill text-primary"></i> Treatment Reminders</h3>
+                <p class="text-muted">Manage your treatment schedules and medication reminders</p>
+            </div>
+            <div class="col-auto">
+                <button class="btn btn-primary" @onclick="NavigateToCreate">
+                    <i class="bi bi-plus-circle"></i> Add New Reminder
+                </button>
+            </div>
+        </div>
+
+        <!-- Search and Filter Section -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-search"></i> Search & Filter</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Title</label>
+                        <input type="text" class="form-control" @bind="searchRequest.Title" placeholder="Search by title..." />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Patient Name</label>
+                        <input type="text" class="form-control" @bind="searchRequest.PatientName" placeholder="Search by patient..." />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" @bind="searchRequest.IsSent">
+                            <option value="">All Status</option>
+                            <option value="true">Sent</option>
+                            <option value="false">Pending</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Recurring</label>
+                        <select class="form-select" @bind="searchRequest.IsRecurring">
+                            <option value="">All Types</option>
+                            <option value="true">Recurring</option>
+                            <option value="false">One-time</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-grid">
+                            <button class="btn btn-secondary" @onclick="SearchReminders">
+                                <i class="bi bi-search"></i> Search
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Reminder Date</label>
+                        <input type="date" class="form-control" @bind="searchRequest.ReminderDate" @bind:format="yyyy-MM-dd" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Related Doctor</label>
+                        <input type="text" class="form-control" @bind="searchRequest.RelatedDoctor" placeholder="Search by doctor..." />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Reminder Type</label>
+                        <select class="form-select" @bind="searchRequest.ReminderTypeId">
+                            <option value="">All Types</option>
+                            @foreach (var type in reminderTypes)
+                            {
+                                <option value="@type.ReminderTypeId">@type.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Items per page</label>
+                        <select class="form-select" @bind="searchRequest.PageSize">
+                            <option value="3">3 per page</option>
+                            <option value="6" selected>6 per page</option>
+                            <option value="9">9 per page</option>
+                            <option value="12">12 per page</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-auto">
+                        <button class="btn btn-outline-secondary" @onclick="ClearSearch">
+                            <i class="bi bi-x-circle"></i> Clear
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (isLoading)
+        {
+            <div class="text-center">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        }
+        else if (treatmentReminders == null || !treatmentReminders.Any())
+        {
+            <div class="alert alert-info" role="alert">
+                <i class="bi bi-info-circle"></i> No treatment reminders found. 
+                <a href="/treatment-reminders/create" class="alert-link">Create your first reminder</a>.
+            </div>
+        }
+        else
+        {
+            <div class="row">
+                @foreach (var reminder in treatmentReminders)
+                {
+                    <div class="col-lg-6 col-xl-4 mb-4">
+                        <div class="card h-100 shadow-sm">
+                            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0">
+                                    <i class="bi bi-calendar-event"></i> @reminder.Title
+                                </h6>
+                                <div>
+                                    @if (reminder.IsSent)
+                                    {
+                                        <span class="badge bg-success">Sent</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning">Pending</span>
+                                    }
+                                    
+                                    @if (reminder.IsRecurring)
+                                    {
+                                        <span class="badge bg-info">
+                                            <i class="bi bi-arrow-repeat"></i>
+                                        </span>
+                                    }
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <p class="card-text text-muted">
+                                        @if (!string.IsNullOrEmpty(reminder.Message) && reminder.Message.Length > 50)
+                                        {
+                                            @(reminder.Message.Substring(0, 50) + "...")
+                                        }
+                                        else
+                                        {
+                                            @reminder.Message
+                                        }
+                                    </p>
+                                    
+                                    <div class="row text-center mb-3">
+                                        <div class="col-6">
+                                            <small class="text-muted d-block">
+                                                <i class="bi bi-person"></i> Patient
+                                            </small>
+                                            <strong>@reminder.PatientName</strong>
+                                        </div>
+                                        <div class="col-6">
+                                            <small class="text-muted d-block">
+                                                <i class="bi bi-clock"></i> Date
+                                            </small>
+                                            <strong>@reminder.ReminderDate?.ToString("MMM dd, HH:mm")</strong>
+                                        </div>
+                                    </div>
+
+                                    @if (!string.IsNullOrEmpty(reminder.RelatedDoctor))
+                                    {
+                                        <div class="text-center mb-3">
+                                            <small class="text-muted">
+                                                <i class="bi bi-person-badge"></i> Dr. @reminder.RelatedDoctor
+                                            </small>
+                                        </div>
+                                    }
+
+                                    @if (reminder.ReminderType != null)
+                                    {
+                                        <div class="text-center mb-3">
+                                            <span class="badge bg-info">
+                                                <i class="bi bi-tag"></i> @reminder.ReminderType.Name
+                                            </span>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                            <div class="card-footer bg-light">
+                                <div class="btn-group w-100" role="group">
+                                    <button class="btn btn-outline-info btn-sm" 
+                                            @onclick="() => ViewDetails(reminder)">
+                                        <i class="bi bi-eye"></i> View
+                                    </button>
+                                    <button class="btn btn-outline-primary btn-sm" 
+                                            @onclick="() => NavigateToEdit(reminder.ReminderId)">
+                                        <i class="bi bi-pencil"></i> Edit
+                                    </button>
+                                    @if (!reminder.IsSent)
+                                    {
+                                        <button class="btn btn-outline-success btn-sm" 
+                                                @onclick="() => MarkAsSent(reminder)">
+                                            <i class="bi bi-check-circle"></i> Send
+                                        </button>
+                                    }
+                                    <button class="btn btn-outline-danger btn-sm" 
+                                            @onclick="() => ConfirmDelete(reminder)">
+                                        <i class="bi bi-trash"></i> Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Pagination Controls -->
+            <div class="row mt-4">
+                <div class="col-md-12">
+                    <nav aria-label="Treatment reminders pagination">
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item @(searchRequest.CurrentPage <= 1 ? "disabled" : "")">
+                                <button class="page-link" @onclick="() => GoToPage(1)" disabled="@(searchRequest.CurrentPage <= 1)">
+                                    <i class="bi bi-chevron-double-left"></i> First
+                                </button>
+                            </li>
+                            <li class="page-item @(searchRequest.CurrentPage <= 1 ? "disabled" : "")">
+                                <button class="page-link" @onclick="() => GoToPage(searchRequest.CurrentPage.GetValueOrDefault() - 1)" disabled="@(searchRequest.CurrentPage <= 1)">
+                                    <i class="bi bi-chevron-left"></i> Previous
+                                </button>
+                            </li>
+                            
+                            @{
+                                var startPage = Math.Max(1, searchRequest.CurrentPage.GetValueOrDefault() - 2);
+                                var endPage = Math.Min(totalPages, searchRequest.CurrentPage.GetValueOrDefault() + 2);
+                            }
+                            
+                            @for (int pageNum = startPage; pageNum <= endPage; pageNum++)
+                            {
+                                var currentPageNumber = pageNum; // Capture for lambda
+                                <li class="page-item @(pageNum == searchRequest.CurrentPage ? "active" : "")">
+                                    <button class="page-link" @onclick="() => GoToPage(currentPageNumber)">@pageNum</button>
+                                </li>
+                            }
+                            
+                            <li class="page-item @(searchRequest.CurrentPage >= totalPages ? "disabled" : "")">
+                                <button class="page-link" @onclick="() => GoToPage(searchRequest.CurrentPage.GetValueOrDefault() + 1)" disabled="@(searchRequest.CurrentPage >= totalPages)">
+                                    Next <i class="bi bi-chevron-right"></i>
+                                </button>
+                            </li>
+                            <li class="page-item @(searchRequest.CurrentPage >= totalPages ? "disabled" : "")">
+                                <button class="page-link" @onclick="() => GoToPage(totalPages)" disabled="@(searchRequest.CurrentPage >= totalPages)">
+                                    Last <i class="bi bi-chevron-double-right"></i>
+                                </button>
+                            </li>
+                        </ul>
+                    </nav>
+                    
+                    <div class="text-center text-muted">
+                        <div class="mb-2">
+                            Showing @(((searchRequest.CurrentPage.GetValueOrDefault() - 1) * searchRequest.PageSize.GetValueOrDefault()) + 1) 
+                            to @(Math.Min(searchRequest.CurrentPage.GetValueOrDefault() * searchRequest.PageSize.GetValueOrDefault(), totalItems)) 
+                            of @totalItems entries
+                        </div>
+                        <div class="badge bg-success">
+                            <i class="bi bi-info-circle"></i> Showing @searchRequest.PageSize items per page (7th item jumps to page 2)
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Summary Statistics -->
+            <div class="row mt-4">
+                <div class="col-md-12">
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h6><i class="bi bi-graph-up"></i> Current Page Statistics</h6>
+                            <div class="row text-center">
+                                <div class="col-3">
+                                    <div class="h4 text-primary">@treatmentReminders.Count</div>
+                                    <small class="text-muted">Current Page</small>
+                                </div>
+                                <div class="col-3">
+                                    <div class="h4 text-success">@treatmentReminders.Count(r => r.IsSent)</div>
+                                    <small class="text-muted">Sent</small>
+                                </div>
+                                <div class="col-3">
+                                    <div class="h4 text-warning">@treatmentReminders.Count(r => !r.IsSent)</div>
+                                    <small class="text-muted">Pending</small>
+                                </div>
+                                <div class="col-3">
+                                    <div class="h4 text-info">@treatmentReminders.Count(r => r.IsRecurring)</div>
+                                    <small class="text-muted">Recurring</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- View Details Modal -->
+    @if (selectedReminder != null)
+    {
+        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title">
+                            <i class="bi bi-eye"></i> Reminder Details
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" @onclick="CloseModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Title</label>
+                                    <p class="form-control-plaintext">@selectedReminder.Title</p>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Patient Name</label>
+                                    <p class="form-control-plaintext">@selectedReminder.PatientName</p>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Related Doctor</label>
+                                    <p class="form-control-plaintext">@(selectedReminder.RelatedDoctor ?? "Not specified")</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Reminder Date</label>
+                                    <p class="form-control-plaintext">@selectedReminder.ReminderDate?.ToString("dddd, MMMM dd, yyyy 'at' HH:mm")</p>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Created At</label>
+                                    <p class="form-control-plaintext">@selectedReminder.CreatedAt?.ToString("dddd, MMMM dd, yyyy 'at' HH:mm")</p>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Reminder Type</label>
+                                    <p class="form-control-plaintext">@(selectedReminder.ReminderType?.Name ?? "Not specified")</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Message</label>
+                                    <p class="form-control-plaintext border p-3 bg-light rounded">@(selectedReminder.Message ?? "No message provided")</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="text-center">
+                                    <div class="badge @(selectedReminder.IsSent ? "bg-success" : "bg-warning") fs-6 p-2">
+                                        <i class="bi @(selectedReminder.IsSent ? "bi-check-circle" : "bi-clock")"></i>
+                                        @(selectedReminder.IsSent ? "Sent" : "Pending")
+                                    </div>
+                                    <small class="d-block text-muted mt-1">Status</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-center">
+                                    <div class="badge @(selectedReminder.IsRecurring ? "bg-info" : "bg-secondary") fs-6 p-2">
+                                        <i class="bi @(selectedReminder.IsRecurring ? "bi-arrow-repeat" : "bi-calendar-event")"></i>
+                                        @(selectedReminder.IsRecurring ? "Recurring" : "One-time")
+                                    </div>
+                                    <small class="d-block text-muted mt-1">Frequency</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-center">
+                                    <div class="badge bg-primary fs-6 p-2">
+                                        <i class="bi bi-hash"></i>
+                                        ID: @selectedReminder.ReminderId
+                                    </div>
+                                    <small class="d-block text-muted mt-1">Reminder ID</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseModal">
+                            <i class="bi bi-x-circle"></i> Close
+                        </button>
+                        <button type="button" class="btn btn-primary" @onclick="() => NavigateToEdit(selectedReminder.ReminderId)">
+                            <i class="bi bi-pencil"></i> Edit Reminder
+                        </button>
+                        @if (!selectedReminder.IsSent)
+                        {
+                            <button type="button" class="btn btn-success" @onclick="() => MarkAsSent(selectedReminder)">
+                                <i class="bi bi-check-circle"></i> Mark as Sent
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</AuthGuard>
+
+@code {
+    private List<TreatmentReminderTrungLb> treatmentReminders = new();
+    private List<ReminderTypeTrungLb> reminderTypes = new();
+    private TreatmentReminderTrungLb? selectedReminder = null;
+    private bool isLoading = true;
+    private int totalItems = 0;
+    private int totalPages = 0;
+
+    private SearchTreatmentReminderRequest searchRequest = new()
+    {
+        CurrentPage = 1,
+        PageSize = 6 // Set to 6 items per page - 7th item will jump to page 2
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadReminderTypes();
+        await SearchReminders();
+    }
+
+    private async Task LoadReminderTypes()
+    {
+        try
+        {
+            reminderTypes = await GraphQLClient.GetReminderTypeTrungLbs();
+        }
+        catch (Exception ex)
+        {
+            // Silently handle errors for reminder types
+        }
+    }
+
+    private async Task SearchReminders()
+    {
+        isLoading = true;
+        try
+        {
+            treatmentReminders = await GraphQLClient.SearchTreatmentRemindersWithPaging(searchRequest);
+            
+            // Calculate pagination info from current results
+            totalItems = treatmentReminders.Count;
+            totalPages = (int)Math.Ceiling((double)totalItems / searchRequest.PageSize.GetValueOrDefault());
+            
+            // Simulate total count for better demo (in real app this would come from GraphQL)
+            if (treatmentReminders.Any())
+            {
+                totalItems = Math.Max(totalItems, searchRequest.CurrentPage.GetValueOrDefault() * searchRequest.PageSize.GetValueOrDefault());
+                totalPages = Math.Max(totalPages, searchRequest.CurrentPage.GetValueOrDefault());
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("showToast", $"Failed to load data. Please ensure the API service is running.", "error");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task GoToPage(int page)
+    {
+        if (page >= 1 && page <= totalPages && page != searchRequest.CurrentPage)
+        {
+            searchRequest.CurrentPage = page;
+            await SearchReminders();
+        }
+    }
+
+    private async Task ClearSearch()
+    {
+        searchRequest = new SearchTreatmentReminderRequest
+        {
+            CurrentPage = 1,
+            PageSize = 6 // Reset to 6 items per page
+        };
+        await SearchReminders();
+    }
+
+    private void ViewDetails(TreatmentReminderTrungLb reminder)
+    {
+        selectedReminder = reminder;
+    }
+
+    private void CloseModal()
+    {
+        selectedReminder = null;
+    }
+
+    private void NavigateToCreate()
+    {
+        Navigation.NavigateTo("/treatment-reminders/create");
+    }
+
+    private void NavigateToEdit(int id)
+    {
+        Navigation.NavigateTo($"/treatment-reminders/edit/{id}");
+        CloseModal(); // Close modal if open
+    }
+
+    private async Task MarkAsSent(TreatmentReminderTrungLb reminder)
+    {
+        try
+        {
+            reminder.IsSent = true;
+            var result = await GraphQLClient.UpdateTreatmentReminder(reminder);
+            
+            if (result > 0)
+            {
+                await JSRuntime.InvokeVoidAsync("showToast", "Reminder marked as sent!", "success");
+                await SearchReminders(); // Refresh
+                CloseModal(); // Close modal if open
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("showToast", "Error updating reminder.", "error");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("showToast", $"Error: {ex.Message}", "error");
+        }
+    }
+
+    private async Task ConfirmDelete(TreatmentReminderTrungLb reminder)
+    {
+        var confirmMessage = $"Are you sure you want to delete the reminder '{reminder.Title}'?\n\nThis action cannot be undone.";
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", confirmMessage);
+        
+        if (confirmed)
+        {
+            await DeleteReminder(reminder.ReminderId);
+        }
+    }
+
+    private async Task DeleteReminder(int id)
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("showToast", "Deleting reminder...", "info");
+            
+            var success = await GraphQLClient.DeleteTreatmentReminder(id);
+            
+            if (success)
+            {
+                await SearchReminders(); // Refresh the list
+                await JSRuntime.InvokeVoidAsync("showToast", "Treatment reminder deleted successfully!", "success");
+                CloseModal(); // Close modal if open
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("showToast", "Failed to delete reminder. The reminder may not exist or there may be a server error.", "error");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("showToast", $"Error deleting reminder: {ex.Message}", "error");
+            Console.WriteLine($"Delete error: {ex.Message}");
+        }
+    }
+}

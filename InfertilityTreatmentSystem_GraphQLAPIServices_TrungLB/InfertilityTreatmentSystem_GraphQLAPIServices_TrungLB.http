@@ -1,0 +1,6 @@
+@InfertilityTreatmentSystem_GraphQLAPIServices_TrungLB_HostAddress = http://localhost:5274
+
+GET {{InfertilityTreatmentSystem_GraphQLAPIServices_TrungLB_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
