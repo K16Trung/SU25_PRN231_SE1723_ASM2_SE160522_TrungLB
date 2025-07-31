@@ -17,20 +17,38 @@ namespace InfertilityTreatmentSystem.Repositories.TrungLB
 
         public async Task<SystemUserAccount> GetUserAccountAsync(string username, string password)
         {
-            //return await _context.SystemUserAccounts
-            //    .FirstOrDefaultAsync(x => x.Email == username && x.Password == password && x.IsActive);
+            try
+            {
+                // Debug: Log what we're searching for
+                Console.WriteLine($"Searching for user: '{username}' with password: '{password}'");
+                
+                // First, get all users to debug
+                var allUsers = await _context.SystemUserAccounts.ToListAsync();
+                Console.WriteLine($"Total users in database: {allUsers.Count}");
+                
+                foreach (var u in allUsers)
+                {
+                    Console.WriteLine($"User: '{u.UserName}', Password: '{u.Password}', IsActive: {u.IsActive}");
+                }
 
-            return await _context.SystemUserAccounts
-                .FirstOrDefaultAsync(x => x.UserName == username && x.Password == password && x.IsActive == true);
+                // Direct match
+                var user = await _context.SystemUserAccounts
+                    .FirstOrDefaultAsync(x => x.UserName == username && x.Password == password && x.IsActive == true);
 
-            //return await _context.SystemUserAccounts
-            //    .FirstOrDefaultAsync(x => x.Phone == username && x.Password == password);
+                if (user != null)
+                {
+                    Console.WriteLine($"Found user: {user.UserName}");
+                    return user;
+                }
 
-            //return await _context.SystemUserAccounts
-            //    .FirstOrDefaultAsync(x => x.EmployeeCode == username && x.Password == password);
-
-            //return await _context.SystemUserAccounts
-            //    .FirstOrDefaultAsync(x => x.UserName == username && x.Password == password && x.IsActive);
+                Console.WriteLine("User not found with exact match");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Database error: {ex.Message}");
+                throw new Exception($"Database error during authentication: {ex.Message}", ex);
+            }
         }
     }
 }

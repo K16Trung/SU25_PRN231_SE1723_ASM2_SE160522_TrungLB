@@ -1,10 +1,12 @@
 ﻿using InfertilityTreatmentSystem.Repositories.TrungLB;
 using InfertilityTreatmentSystem.Repositories.TrungLB.ModelExtensions;
 using InfertilityTreatmentSystem.Repositories.TrungLB.Models;
+using InfertilityTreatmentSystem.Repositories.TrungLB.DBContext;
 using InfertilityTreatmentSystem.Services.TrungLB.Service.IService;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
 namespace InfertilityTreatmentSystem.Services.TrungLB.Service
 {
@@ -69,12 +71,39 @@ namespace InfertilityTreatmentSystem.Services.TrungLB.Service
 
         public async Task<bool> DeleteAsync(int id)
         {
-            var item = await _unitOfWork.TreatmentReminderRepository.GetByIdAsync(id);
-            if (item == null)
+            try
             {
+                // Create a fresh context instance for deletion to avoid tracking issues
+                using (var context = new Su25Prn231Se1723G2InfertilityTreatmentServiceContext())
+                {
+                    // Configure this context to use tracking for this operation
+                    context.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.TrackAll;
+                    
+                    // Find the entity by ID
+                    var item = await context.TreatmentReminderTrungLbs.FindAsync(id);
+                    if (item == null)
+                    {
+                        return false;
+                    }
+                    
+                    // Remove the entity
+                    context.TreatmentReminderTrungLbs.Remove(item);
+                    
+                    // Save changes
+                    var result = await context.SaveChangesAsync();
+                    return result > 0;
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the exception details for debugging
+                Console.WriteLine($"Delete error: {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
+                }
                 return false;
             }
-            return await _unitOfWork.TreatmentReminderRepository.RemoveAsync(item);
         }
 
         #endregion

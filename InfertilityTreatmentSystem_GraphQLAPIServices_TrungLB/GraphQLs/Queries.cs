@@ -1,4 +1,4 @@
-﻿using InfertilityTreatmentSystem.Repositories.TrungLB.ModelExtensions;
+using InfertilityTreatmentSystem.Repositories.TrungLB.ModelExtensions;
 using InfertilityTreatmentSystem.Repositories.TrungLB.Models;
 using InfertilityTreatmentSystem.Services.TrungLB.Service;
 

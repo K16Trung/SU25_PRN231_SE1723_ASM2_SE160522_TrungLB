@@ -7,14 +7,14 @@ namespace InfertilityTreatmentSystem.Services.TrungLB.Service
     {
         IReminderTypeTrungLbService ReminderTypeTrungLbService { get; }
         ITreatmentReminderTrungLbService TreatmentReminderTrungLbService { get; }
-        SystemUserAccountService SystemUserAccountService { get; }
+        ISystemUserAccountService SystemUserAccountService { get; }
     }
 
     public class ServiceProviders : IServiceProviders
     {
         private IReminderTypeTrungLbService _reminderTypeTrungLbService;
         private ITreatmentReminderTrungLbService _treatmentReminderTrungLbService;
-        private SystemUserAccountService _systemUserAccountService;
+        private ISystemUserAccountService _systemUserAccountService;
 
         public ServiceProviders()
         {
@@ -30,7 +30,7 @@ namespace InfertilityTreatmentSystem.Services.TrungLB.Service
             get { return _treatmentReminderTrungLbService ??= new TreatmentReminderTrungLbService(); }
         }
 
-        public SystemUserAccountService SystemUserAccountService
+        public ISystemUserAccountService SystemUserAccountService
         {
             get { return _systemUserAccountService ??= new SystemUserAccountService(); }
         }

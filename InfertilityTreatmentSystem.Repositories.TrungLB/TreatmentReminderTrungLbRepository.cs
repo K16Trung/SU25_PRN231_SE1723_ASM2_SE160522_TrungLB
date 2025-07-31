@@ -159,5 +159,40 @@ namespace InfertilityTreatmentSystem.Repositories.TrungLB
                 Items = treatmentReminders
             };
         }
+
+        // Override RemoveAsync to handle Entity Framework tracking issues
+        public async Task<bool> RemoveAsync(TreatmentReminderTrungLb entity)
+        {
+            try
+            {
+                // Clear any existing tracking to avoid conflicts
+                _context.ChangeTracker.Clear();
+                
+                // Find the entity in the current context to ensure proper tracking
+                var trackedEntity = await _context.TreatmentReminderTrungLbs.FindAsync(entity.ReminderId);
+                
+                if (trackedEntity == null)
+                {
+                    return false;
+                }
+                
+                // Remove the tracked entity
+                _context.TreatmentReminderTrungLbs.Remove(trackedEntity);
+                
+                // Save changes
+                var result = await _context.SaveChangesAsync();
+                return result > 0;
+            }
+            catch (Exception ex)
+            {
+                // Log the exception for debugging
+                Console.WriteLine($"Delete error in RemoveAsync: {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
+                }
+                throw; // Re-throw to let the service layer handle it
+            }
+        }
     }
 }

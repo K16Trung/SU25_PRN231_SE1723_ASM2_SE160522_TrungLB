@@ -8,14 +8,27 @@ using System.Threading.Tasks;
 
 namespace InfertilityTreatmentSystem.Services.TrungLB.Service
 {
-    public class SystemUserAccountService
+    public interface ISystemUserAccountService
+    {
+        Task<SystemUserAccount> GetAccountAsync(string username, string password);
+    }
+
+    public class SystemUserAccountService : ISystemUserAccountService
     {
         private readonly IUnitOfWork _unitOfWork;
         public SystemUserAccountService() => _unitOfWork ??= new UnitOfWork();
 
         public async Task<SystemUserAccount> GetAccountAsync(string username, string password)
         {
-            return await _unitOfWork.SystemUserAccountRepository.GetUserAccountAsync(username, password);
+            try
+            {
+                return await _unitOfWork.SystemUserAccountRepository.GetUserAccountAsync(username, password);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception if needed
+                throw new Exception($"Authentication failed: {ex.Message}", ex);
+            }
         }
     }
 }

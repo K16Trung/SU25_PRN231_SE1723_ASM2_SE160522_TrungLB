@@ -269,7 +269,11 @@
                             of @totalItems entries
                         </div>
                         <div class="badge bg-success">
-                            <i class="bi bi-info-circle"></i> Showing @searchRequest.PageSize items per page (7th item jumps to page 2)
+                            <i class="bi bi-info-circle"></i> Showing @searchRequest.PageSize items per page
+                            @if (totalPages > 1)
+                            {
+                                <span> (@(totalItems - (searchRequest.PageSize ?? 6)) additional items on other pages)</span>
+                            }
                         </div>
                     </div>
                 </div>
@@ -403,7 +407,8 @@
                     </div>
                 </div>
             </div>
-        </div>
+        }
+    </div>
     }
 </AuthGuard>
 
@@ -446,20 +451,87 @@
         {
             treatmentReminders = await GraphQLClient.SearchTreatmentRemindersWithPaging(searchRequest);
             
-            // Calculate pagination info from current results
-            totalItems = treatmentReminders.Count;
-            totalPages = (int)Math.Ceiling((double)totalItems / searchRequest.PageSize.GetValueOrDefault());
-            
-            // Simulate total count for better demo (in real app this would come from GraphQL)
+            // Fix pagination calculation - get actual count from all pages
             if (treatmentReminders.Any())
             {
-                totalItems = Math.Max(totalItems, searchRequest.CurrentPage.GetValueOrDefault() * searchRequest.PageSize.GetValueOrDefault());
-                totalPages = Math.Max(totalPages, searchRequest.CurrentPage.GetValueOrDefault());
+                if (searchRequest.CurrentPage == 1)
+                {
+                    // On page 1, if we have a full page, check if there might be more
+                    if (treatmentReminders.Count == searchRequest.PageSize)
+                    {
+                        // Get all items to count total (this is a workaround until backend provides total count)
+                        var allItemsRequest = new SearchTreatmentReminderRequest
+                        {
+                            CurrentPage = 1,
+                            PageSize = 999, // Get all items
+                            Title = searchRequest.Title,
+                            ReminderDate = searchRequest.ReminderDate,
+                            IsSent = searchRequest.IsSent,
+                            IsRecurring = searchRequest.IsRecurring,
+                            PatientName = searchRequest.PatientName,
+                            RelatedDoctor = searchRequest.RelatedDoctor,
+                            ReminderTypeId = searchRequest.ReminderTypeId
+                        };
+                        var allItems = await GraphQLClient.SearchTreatmentRemindersWithPaging(allItemsRequest);
+                        totalItems = allItems.Count;
+                        totalPages = (int)Math.Ceiling((double)totalItems / searchRequest.PageSize.GetValueOrDefault());
+                        
+                        // Get the correct page items
+                        treatmentReminders = allItems
+                            .Skip((searchRequest.CurrentPage.GetValueOrDefault() - 1) * searchRequest.PageSize.GetValueOrDefault())
+                            .Take(searchRequest.PageSize.GetValueOrDefault())
+                            .ToList();
+                    }
+                    else
+                    {
+                        // Page 1 is not full, so this is all there is
+                        totalItems = treatmentReminders.Count;
+                        totalPages = 1;
+                    }
+                }
+                else
+                {
+                    // For pages beyond 1, we need to get total count
+                    var allItemsRequest = new SearchTreatmentReminderRequest
+                    {
+                        CurrentPage = 1,
+                        PageSize = 999, // Get all items
+                        Title = searchRequest.Title,
+                        ReminderDate = searchRequest.ReminderDate,
+                        IsSent = searchRequest.IsSent,
+                        IsRecurring = searchRequest.IsRecurring,
+                        PatientName = searchRequest.PatientName,
+                        RelatedDoctor = searchRequest.RelatedDoctor,
+                        ReminderTypeId = searchRequest.ReminderTypeId
+                    };
+                    var allItems = await GraphQLClient.SearchTreatmentRemindersWithPaging(allItemsRequest);
+                    totalItems = allItems.Count;
+                    totalPages = (int)Math.Ceiling((double)totalItems / searchRequest.PageSize.GetValueOrDefault());
+                    
+                    // If we're on a page that no longer exists, go to the last page
+                    if (searchRequest.CurrentPage > totalPages && totalPages > 0)
+                    {
+                        searchRequest.CurrentPage = totalPages;
+                    }
+                    
+                    // Get the correct page items
+                    treatmentReminders = allItems
+                        .Skip((searchRequest.CurrentPage.GetValueOrDefault() - 1) * searchRequest.PageSize.GetValueOrDefault())
+                        .Take(searchRequest.PageSize.GetValueOrDefault())
+                        .ToList();
+                }
+            }
+            else
+            {
+                totalItems = 0;
+                totalPages = 0;
             }
         }
         catch (Exception ex)
         {
             await JSRuntime.InvokeVoidAsync("showToast", $"Failed to load data. Please ensure the API service is running.", "error");
+            totalItems = 0;
+            totalPages = 0;
         }
         finally
         {
@@ -467,23 +539,9 @@
         }
     }
 
-    private async Task GoToPage(int page)
+    private void NavigateToCreate()
     {
-        if (page >= 1 && page <= totalPages && page != searchRequest.CurrentPage)
-        {
-            searchRequest.CurrentPage = page;
-            await SearchReminders();
-        }
-    }
-
-    private async Task ClearSearch()
-    {
-        searchRequest = new SearchTreatmentReminderRequest
-        {
-            CurrentPage = 1,
-            PageSize = 6 // Reset to 6 items per page
-        };
-        await SearchReminders();
+        Navigation.NavigateTo("/treatment-reminders/create");
     }
 
     private void ViewDetails(TreatmentReminderTrungLb reminder)
@@ -496,15 +554,9 @@
         selectedReminder = null;
     }
 
-    private void NavigateToCreate()
+    private void NavigateToEdit(int reminderId)
     {
-        Navigation.NavigateTo("/treatment-reminders/create");
-    }
-
-    private void NavigateToEdit(int id)
-    {
-        Navigation.NavigateTo($"/treatment-reminders/edit/{id}");
-        CloseModal(); // Close modal if open
+        Navigation.NavigateTo($"/treatment-reminders/edit/{reminderId}");
     }
 
     private async Task MarkAsSent(TreatmentReminderTrungLb reminder)
@@ -552,8 +604,11 @@
             
             if (success)
             {
-                await SearchReminders(); // Refresh the list
                 await JSRuntime.InvokeVoidAsync("showToast", "Treatment reminder deleted successfully!", "success");
+                
+                // After successful deletion, refresh the data from server
+                await SearchReminders();
+                
                 CloseModal(); // Close modal if open
             }
             else
@@ -567,4 +622,21 @@
             Console.WriteLine($"Delete error: {ex.Message}");
         }
     }
+
+    private async Task GoToPage(int pageNumber)
+    {
+        searchRequest.CurrentPage = pageNumber;
+        await SearchReminders();
+    }
+
+    private void ClearSearch()
+    {
+        searchRequest = new SearchTreatmentReminderRequest
+        {
+            CurrentPage = 1,
+            PageSize = 6 // Reset to 6 items per page
+        };
+        SearchReminders();
+    }
+}
 }

@@ -53,6 +53,20 @@ namespace TreatmentReminder.GraphQLClients.BlazorWAS.TrungLB.GraphQLClients
             }
         }
 
+        // New method to get total count for pagination
+        public async Task<int> GetTreatmentReminderTotalCount()
+        {
+            try
+            {
+                var allReminders = await GetTreatmentReminderTrungLbs();
+                return allReminders.Count;
+            }
+            catch (Exception ex)
+            {
+                return 0;
+            }
+        }
+
         public async Task<TreatmentReminderTrungLb?> GetTreatmentReminderById(int id)
         {
             try
@@ -256,6 +270,30 @@ namespace TreatmentReminder.GraphQLClients.BlazorWAS.TrungLB.GraphQLClients
             {
                 Console.WriteLine($"Exception in DeleteTreatmentReminder: {ex.Message}");
                 throw; // Re-throw to let the UI handle it
+            }
+        }
+
+        // Add missing method for marking reminders as sent
+        public async Task<TreatmentReminderTrungLb?> MarkTreatmentReminderAsSent(int id)
+        {
+            try
+            {
+                // First get the current reminder
+                var reminder = await GetTreatmentReminderById(id);
+                if (reminder == null) return null;
+
+                // Mark it as sent
+                reminder.IsSent = true;
+                
+                // Update it
+                var result = await UpdateTreatmentReminder(reminder);
+                
+                return result > 0 ? reminder : null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Exception in MarkTreatmentReminderAsSent: {ex.Message}");
+                return null;
             }
         }
         #endregion

@@ -66,7 +66,10 @@ async Task SeedTestData(IServiceProvider services)
         using var scope = services.CreateScope();
         var serviceProviders = scope.ServiceProvider.GetRequiredService<IServiceProviders>();
         
-        // Check if we already have data
+        // Seed user accounts first
+        await SeedUserAccounts(serviceProviders);
+        
+        // Check if we already have reminder data
         var existingReminders = await serviceProviders.TreatmentReminderTrungLbService.GetAllAsync();
         
         if (existingReminders.Any())
@@ -139,5 +142,71 @@ async Task SeedTestData(IServiceProvider services)
     catch (Exception ex)
     {
         // Silently handle seeding errors
+        Console.WriteLine($"Seeding error: {ex.Message}");
+    }
+}
+
+// Method to seed user accounts
+async Task SeedUserAccounts(IServiceProviders serviceProviders)
+{
+    try
+    {
+        // Check if admin user already exists
+        var existingUser = await serviceProviders.SystemUserAccountService.GetAccountAsync("admin", "Admin1234!");
+        
+        if (existingUser == null)
+        {
+            // Create test user accounts if they don't exist
+            var testUsers = new List<SystemUserAccount>
+            {
+                new SystemUserAccount
+                {
+                    UserName = "admin",
+                    Password = "Admin1234!",
+                    FullName = "System Administrator",
+                    Email = "admin@infertilitytreatment.com",
+                    Phone = "0967425254",
+                    EmployeeCode = "EMP001",
+                    RoleId = 1,
+                    CreatedDate = DateTime.Now,
+                    IsActive = true,
+                    ApplicationCode = "INFERTILITY_SYSTEM",
+                    CreatedBy = "System"
+                },
+                new SystemUserAccount
+                {
+                    UserName = "doctor.leminh",
+                    Password = "Doc2024!",
+                    FullName = "Dr. Le Minh",
+                    Email = "doctor.leminh@infertilitytreatment.com",
+                    Phone = "0912345678",
+                    EmployeeCode = "DOC001",
+                    RoleId = 2,
+                    CreatedDate = DateTime.Now,
+                    IsActive = true,
+                    ApplicationCode = "INFERTILITY_SYSTEM",
+                    CreatedBy = "System"
+                }
+            };
+
+            // Use UnitOfWork to add users directly to the database
+            using var unitOfWork = new InfertilityTreatmentSystem.Repositories.TrungLB.UnitOfWork();
+            
+            foreach (var user in testUsers)
+            {
+                await unitOfWork.SystemUserAccountRepository.CreateAsync(user);
+            }
+            
+            await unitOfWork.SaveChangesWithTransactionAsync();
+            Console.WriteLine("Test user accounts created successfully.");
+        }
+        else
+        {
+            Console.WriteLine("Test user accounts already exist.");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error seeding user accounts: {ex.Message}");
     }
 }
